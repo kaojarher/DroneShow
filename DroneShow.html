@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SkyNode 2D 編舞工作台</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+TC:wght@400;700;900&display=swap');
+  :root {
+    --bg:#090c12;--panel:#0f1520;--border:#1e2d45;
+    --accent:#00d4ff;--accent2:#ff6b35;--gold:#ffd700;--red:#f5222d;
+    --green:#39ff14;--text:#c8dff0;--text-dim:#4a6070;
+    --mono:'Share Tech Mono',monospace;--sans:'Noto Sans TC',sans-serif;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+  header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--border);flex-shrink:0;gap:8px;flex-wrap:wrap}
+  .logo{font-family:var(--mono);font-size:16px;letter-spacing:2px;color:var(--accent);white-space:nowrap}
+  .logo span{color:#fff}.logo em{color:var(--red);font-style:normal;font-size:10px}
+  .header-tools{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+  .hbtn{background:var(--border);border:1px solid #2a3f5a;color:var(--text);padding:5px 11px;border-radius:5px;cursor:pointer;font-size:12px;font-family:var(--sans);transition:.15s;white-space:nowrap}
+  .hbtn:hover{background:#1e3050;border-color:var(--accent);color:var(--accent)}
+  .hbtn.danger{border-color:var(--red);color:var(--red)}.hbtn.danger:hover{background:rgba(245,34,45,.15)}
+  .hbtn.primary{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}.hbtn.primary:hover{background:#00b8e0}
+  .hbtn.connected{background:rgba(0,212,255,.15);border-color:var(--accent);color:var(--accent)}
+  .hbtn.sim-running{background:rgba(57,255,20,.15);border-color:var(--green);color:var(--green)}
+  .drone-count-wrap{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-dim)}
+  .drone-count-wrap input[type=number]{width:48px;background:#12191f;border:1px solid #2a3f5a;color:var(--accent);padding:4px 5px;border-radius:4px;font-family:var(--mono);font-size:13px;text-align:center}
+  .drone-count-wrap input:focus{outline:none;border-color:var(--accent)}
+
+  .workspace{display:flex;flex:1;overflow:hidden}
+
+  /* Sidebar */
+  .sidebar{width:205px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+  .sidebar-section{padding:11px;border-bottom:1px solid var(--border)}
+  .sidebar-section h3{font-size:10px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;margin-bottom:8px;font-family:var(--mono)}
+  .tool-btn{display:flex;align-items:center;gap:7px;width:100%;background:transparent;border:1px solid transparent;color:var(--text);padding:7px 9px;border-radius:5px;cursor:pointer;font-size:12px;font-family:var(--sans);transition:.15s;margin-bottom:3px;text-align:left}
+  .tool-btn:hover{background:var(--border);border-color:#2a3f5a}
+  .tool-btn.active{background:rgba(0,212,255,.12);border-color:var(--accent);color:var(--accent)}
+  .tool-btn .icon{font-size:14px;width:17px;text-align:center}
+  .tool-btn .sc{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text-dim)}
+  .color-row{display:flex;gap:5px;flex-wrap:wrap}
+  .swatch{width:25px;height:25px;border-radius:4px;cursor:pointer;border:2px solid transparent;transition:.15s}
+  .swatch.active{border-color:#fff;transform:scale(1.1)}.swatch:hover{transform:scale(1.05)}
+  .preset-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+  .preset-btn{background:var(--border);border:1px solid #2a3f5a;color:var(--text);padding:6px 3px;border-radius:5px;cursor:pointer;font-size:11px;font-family:var(--sans);transition:.15s;text-align:center}
+  .preset-btn:hover{background:#1e3050;border-color:var(--accent);color:var(--accent)}
+  .frame-list{max-height:175px;overflow-y:auto}
+  .frame-item{display:flex;align-items:center;gap:4px;padding:5px 7px;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--mono);color:var(--text-dim);transition:.15s;margin-bottom:2px}
+  .frame-item:hover{background:var(--border);color:var(--text)}
+  .frame-item.active-frame{background:rgba(0,212,255,.1);color:var(--accent)}
+  .frame-item .fn{width:18px;text-align:right}
+  .frame-item .fc{margin-left:auto;color:#2a5070;font-size:10px}
+  .frame-item .del-btn{color:var(--red);background:none;border:none;cursor:pointer;font-size:12px;padding:0 2px}
+
+  /* Canvas */
+  .canvas-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;position:relative;background:radial-gradient(ellipse at center,#0a1520 0%,var(--bg) 70%)}
+  .canvas-label{position:absolute;top:9px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:11px;color:var(--text-dim);letter-spacing:1px;pointer-events:none;white-space:nowrap}
+  #grid-canvas{display:block;cursor:crosshair}
+  .zoom-controls{position:absolute;bottom:11px;right:11px;display:flex;gap:4px}
+  .zoom-btn{width:27px;height:27px;background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:4px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:.15s}
+  .zoom-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .statusbar{position:absolute;bottom:11px;left:11px;font-family:var(--mono);font-size:11px;color:var(--text-dim);pointer-events:none}
+
+  /* Sim inline bar */
+  .sim-bar{position:absolute;top:36px;left:50%;transform:translateX(-50%);display:none;gap:7px;align-items:center;background:rgba(5,8,16,.9);border:1px solid var(--green);border-radius:8px;padding:6px 13px;backdrop-filter:blur(10px);z-index:20;white-space:nowrap}
+  .sim-bar.visible{display:flex}
+  .simbtn{background:transparent;border:1px solid #2a3f5a;color:var(--text);padding:4px 11px;border-radius:5px;cursor:pointer;font-size:12px;font-family:var(--sans);transition:.15s}
+  .simbtn:hover{border-color:var(--green);color:var(--green)}
+  .simbtn.stop-s{border-color:var(--red);color:var(--red)}.simbtn.stop-s:hover{background:rgba(245,34,45,.12)}
+  #spbar-wrap{width:110px;height:4px;background:#1e2d45;border-radius:2px;overflow:hidden}
+  #spbar{height:100%;background:var(--green);width:0%;transition:width .3s}
+  #spbar-label{font-family:var(--mono);font-size:11px;color:var(--text-dim)}
+  .spd-sel{background:#12191f;border:1px solid #2a3f5a;color:var(--text);padding:3px 5px;border-radius:4px;font-size:11px;font-family:var(--mono)}
+  .sim-badge{position:absolute;top:9px;right:11px;font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:11px;pointer-events:none;display:none}
+  .sim-badge.sim{display:block;background:rgba(57,255,20,.1);border:1px solid var(--green);color:var(--green)}
+  .sim-badge.real{display:block;background:rgba(0,212,255,.1);border:1px solid var(--accent);color:var(--accent)}
+
+  /* Right panel */
+  .right-panel{width:210px;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+  .rp-section{padding:11px;border-bottom:1px solid var(--border)}
+  .rp-section h3{font-size:10px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;margin-bottom:8px;font-family:var(--mono)}
+  .stat-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:4px}
+  .stat-row .val{font-family:var(--mono);color:var(--accent)}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:4px}
+  .legend-dot{width:10px;height:10px;border-radius:50%}
+  #preview-canvas{display:block;border:1px solid var(--border);border-radius:4px;margin-top:6px;width:100%;background:#090c12}
+
+  /* Connection panel */
+  .cdot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px}
+  .cdot.off{background:#333}.cdot.cing{background:#ff6b35;animation:pulse .8s infinite}.cdot.on{background:var(--green);box-shadow:0 0 5px var(--green)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .ip-row{display:flex;align-items:center;gap:3px;margin-bottom:4px}
+  .ip-row .did{font-family:var(--mono);font-size:10px;color:var(--text-dim);width:18px;text-align:right;flex-shrink:0}
+  .ip-row input{flex:1;background:#090c12;border:1px solid #2a3f5a;color:var(--text);padding:3px 4px;border-radius:3px;font-family:var(--mono);font-size:11px;min-width:0}
+  .ip-row input:focus{outline:none;border-color:var(--accent)}
+  .ip-row .pdot{width:6px;height:6px;border-radius:50%;background:#333;flex-shrink:0}
+  .ip-row .pdot.ok{background:var(--green)}.ip-row .pdot.fail{background:var(--red)}
+  .ip-list-wrap{max-height:140px;overflow-y:auto;margin-bottom:7px}
+  .rcmd-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:5px}
+  .rcmd{background:var(--border);border:1px solid #2a3f5a;color:var(--text);padding:7px 3px;border-radius:5px;cursor:pointer;font-size:11px;text-align:center;transition:.15s}
+  .rcmd:hover{background:#1e3050;border-color:var(--accent);color:var(--accent)}
+  .rcmd.to{border-color:#39ff14;color:#39ff14}.rcmd.to:hover{background:rgba(57,255,20,.08)}
+  .rcmd.la{border-color:var(--gold);color:var(--gold)}.rcmd.la:hover{background:rgba(255,215,0,.08)}
+  .rcmd.em{border-color:var(--red);color:var(--red);grid-column:span 2}.rcmd.em:hover{background:rgba(245,34,45,.12)}
+  .rcmd.sy{grid-column:span 2;border-color:var(--accent);color:var(--accent)}.rcmd.sy:hover{background:rgba(0,212,255,.08)}
+  .gw-row{display:flex;gap:4px;margin-bottom:7px}
+  .gw-row input{flex:1;background:#090c12;border:1px solid #2a3f5a;color:var(--text);padding:4px 6px;border-radius:4px;font-family:var(--mono);font-size:11px;min-width:0}
+  .gw-row input:focus{outline:none;border-color:var(--accent)}
+  .conn-log{background:#050810;border:1px solid var(--border);border-radius:4px;padding:5px;font-family:var(--mono);font-size:10px;height:75px;overflow-y:auto;color:#4a8060}
+  .conn-log .err{color:var(--red)}.conn-log .ok{color:var(--green)}.conn-log .info{color:#4a6070}
+
+  .tooltip{position:fixed;background:#1a2535;border:1px solid var(--accent);color:var(--accent);font-family:var(--mono);font-size:11px;padding:3px 8px;border-radius:4px;pointer-events:none;display:none;z-index:100}
+
+  /* Modals */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.83);display:none;align-items:center;justify-content:center;z-index:200}
+  .modal-overlay.open{display:flex}
+  .modal{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;max-width:500px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,.8);max-height:90vh;overflow-y:auto}
+  .modal h2{font-size:15px;color:var(--gold);margin-bottom:13px}
+  .modal textarea{width:100%;height:180px;background:#050810;border:1px solid var(--border);color:#0f9;font-family:var(--mono);font-size:11px;padding:8px;border-radius:5px;resize:none}
+  .modal-actions{display:flex;gap:7px;margin-top:10px;justify-content:flex-end}
+  .text-gen-row{display:flex;gap:5px;margin-bottom:7px}
+  .text-gen-row input[type=text]{flex:1;background:#12191f;border:1px solid #2a3f5a;color:#fff;padding:5px 7px;border-radius:4px;font-size:13px;font-family:var(--sans)}
+  .text-gen-row input:focus{outline:none;border-color:var(--accent)}
+  label.ck{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-dim);cursor:pointer;margin-bottom:7px}
+  label.ck input{accent-color:var(--accent)}
+
+  /* Sim modal */
+  #sim-modal .modal{max-width:720px}
+  .sim-canvas-wrap{background:#050810;border:1px solid var(--border);border-radius:7px;overflow:hidden;margin-bottom:11px;position:relative}
+  #sim-canvas{display:block;width:100%}
+  .sim-stats{display:flex;gap:14px;font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-bottom:9px;flex-wrap:wrap}
+  .sim-stats b{color:var(--accent)}
+  .sim-cmd-row{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:9px}
+  .scmd{background:var(--border);border:1px solid #2a3f5a;color:var(--text);padding:6px 13px;border-radius:5px;cursor:pointer;font-size:12px;font-family:var(--sans);transition:.15s}
+  .scmd:hover{background:#1e3050;border-color:var(--accent);color:var(--accent)}
+  .scmd.g{border-color:var(--green);color:var(--green)}.scmd.g:hover{background:rgba(57,255,20,.1)}
+  .scmd.r{border-color:var(--red);color:var(--red)}.scmd.r:hover{background:rgba(245,34,45,.1)}
+  .scmd.y{border-color:var(--gold);color:var(--gold)}.scmd.y:hover{background:rgba(255,215,0,.1)}
+  .scmd.a{border-color:var(--accent);color:var(--accent)}.scmd.a:hover{background:rgba(0,212,255,.1)}
+  #modal-spbar-wrap{flex:1;height:4px;background:#1e2d45;border-radius:2px;overflow:hidden;min-width:60px}
+  #modal-spbar{height:100%;background:var(--accent);width:0%;transition:width .4s}
+
+  ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+  /* Image-to-drone modal */
+  #img2drone-modal .modal{max-width:680px}
+  .img2d-row{display:flex;gap:11px;margin-bottom:11px;align-items:flex-start;flex-wrap:wrap}
+  .img2d-drop{flex:1;min-width:220px;border:2px dashed #2a3f5a;border-radius:8px;padding:18px;text-align:center;cursor:pointer;transition:.2s;color:var(--text-dim);font-size:12px;position:relative}
+  .img2d-drop:hover,.img2d-drop.drag-over{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.05)}
+  .img2d-drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+  #img2d-preview-wrap{flex:1;min-width:220px}
+  #img2d-src-canvas{display:block;width:100%;border:1px solid var(--border);border-radius:5px;background:#090c12;max-height:200px}
+  #img2d-result-canvas{display:block;width:100%;border:1px solid var(--border);border-radius:5px;background:#090c12;max-height:200px;margin-top:7px}
+  .img2d-controls{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:9px}
+  .img2d-controls label{font-size:11px;color:var(--text-dim)}
+  .img2d-controls input[type=range]{accent-color:var(--accent);width:90px}
+  .img2d-controls select{background:#12191f;border:1px solid #2a3f5a;color:var(--text);padding:3px 6px;border-radius:4px;font-size:11px;font-family:var(--mono)}
+  .img2d-mode-tabs{display:flex;gap:4px;margin-bottom:9px}
+  .img2d-tab{background:var(--border);border:1px solid #2a3f5a;color:var(--text-dim);padding:5px 12px;border-radius:5px;cursor:pointer;font-size:11px;transition:.15s}
+  .img2d-tab.active{background:rgba(0,212,255,.12);border-color:var(--accent);color:var(--accent)}
+  /* Recording */
+  .rec-indicator{position:absolute;top:8px;left:8px;display:none;align-items:center;gap:5px;background:rgba(245,34,45,.18);border:1px solid var(--red);border-radius:5px;padding:3px 9px;font-family:var(--mono);font-size:11px;color:var(--red);z-index:30}
+  .rec-indicator.active{display:flex}
+  .rec-dot{width:7px;height:7px;border-radius:50%;background:var(--red);animation:pulse .8s infinite}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">SKY<span>NODE</span> <em>2D STAGE</em></div>
+  <div class="header-tools">
+    <div class="drone-count-wrap">
+      <span>機數：</span>
+      <input type="number" id="drone-count" min="1" max="100" value="16">
+    </div>
+    <button class="hbtn" onclick="clearCanvas()">🗑 清除</button>
+    <button class="hbtn" onclick="undoAction()">↩ 復原</button>
+    <button class="hbtn" onclick="fillSymmetry()">⟺ 對稱</button>
+    <button class="hbtn" onclick="openTextModal()">Ａ 文字</button>
+    <button class="hbtn" onclick="recordFrame()">📸 錄製</button>
+    <button class="hbtn" onclick="openImg2DroneModal()">🖼 圖片轉位置</button>
+    <button class="hbtn" id="sim-modal-btn" onclick="openSimModal()">▶ 模擬飛行</button>
+    <button class="hbtn" id="inline-sim-btn" onclick="toggleInlineSim()">⏵ 序列播放</button>
+    <button class="hbtn" id="real-btn" onclick="toggleRealPanel()">📡 實體連線</button>
+    <button class="hbtn primary" onclick="exportJSON()">↗ 匯出 JSON</button>
+    <button class="hbtn danger" onclick="clearAll()">✕ 全清</button>
+  </div>
+</header>
+
+<div class="workspace">
+
+  <!-- Left Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <h3>工具</h3>
+      <button class="tool-btn active" id="tool-draw" onclick="setTool('draw')"><span class="icon">✦</span>放置無人機<span class="sc">D</span></button>
+      <button class="tool-btn" id="tool-erase" onclick="setTool('erase')"><span class="icon">◻</span>清除格子<span class="sc">E</span></button>
+      <button class="tool-btn" id="tool-select" onclick="setTool('select')"><span class="icon">⊹</span>選擇拖移<span class="sc">S</span></button>
+      <button class="tool-btn" id="tool-fill" onclick="setTool('fill')"><span class="icon">⬡</span>區域填充<span class="sc">F</span></button>
+    </div>
+
+    <div class="sidebar-section">
+      <h3>顏色 / 燈光</h3>
+      <div class="color-row">
+        <div class="swatch active" data-color="#00d4ff" style="background:#00d4ff" onclick="setColor(this)"></div>
+        <div class="swatch" data-color="#ff6b35" style="background:#ff6b35" onclick="setColor(this)"></div>
+        <div class="swatch" data-color="#ffd700" style="background:#ffd700" onclick="setColor(this)"></div>
+        <div class="swatch" data-color="#f5222d" style="background:#f5222d" onclick="setColor(this)"></div>
+        <div class="swatch" data-color="#39ff14" style="background:#39ff14" onclick="setColor(this)"></div>
+        <div class="swatch" data-color="#bf5fff" style="background:#bf5fff" onclick="setColor(this)"></div>
+        <div class="swatch" data-color="#ffffff" style="background:#fff" onclick="setColor(this)"></div>
+        <div class="swatch" data-color="#ff69b4" style="background:#ff69b4" onclick="setColor(this)"></div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <h3>幾何隊型</h3>
+      <div class="preset-grid">
+        <button class="preset-btn" onclick="applyPreset('circle')">⊙ 圓形</button>
+        <button class="preset-btn" onclick="applyPreset('diamond')">◆ 菱形</button>
+        <button class="preset-btn" onclick="applyPreset('heart')">♥ 愛心</button>
+        <button class="preset-btn" onclick="applyPreset('star')">★ 星形</button>
+        <button class="preset-btn" onclick="applyPreset('octagon')">⬡ 八卦</button>
+        <button class="preset-btn" onclick="applyPreset('arrow')">➤ 箭頭</button>
+        <button class="preset-btn" onclick="applyPreset('cross')">✛ 十字</button>
+        <button class="preset-btn" onclick="applyPreset('spiral')">🌀 螺旋</button>
+        <button class="preset-btn" onclick="applyPreset('wave')">〜 波浪</button>
+        <button class="preset-btn" onclick="applyPreset('lotus')">❀ 蓮花</button>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <h3>舞步序列</h3>
+      <div class="frame-list" id="frame-list"></div>
+      <div style="display:flex;gap:5px;margin-top:7px">
+        <button class="hbtn" style="flex:1;font-size:11px" onclick="openSimModal()">▶ 模擬</button>
+        <button class="hbtn" style="flex:1;font-size:11px" onclick="importJSON()">↙ 匯入</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Canvas Area -->
+  <div class="canvas-wrap" id="canvas-wrap">
+    <div class="canvas-label" id="canvas-label">2D 隊型編輯區 — 格子：20×20</div>
+    <canvas id="grid-canvas"></canvas>
+
+    <!-- Inline sequence sim controls -->
+    <div class="sim-bar" id="sim-bar">
+      <button class="simbtn" onclick="inlinePlay()" id="inl-play">▶ 播放</button>
+      <button class="simbtn" onclick="inlinePause()" id="inl-pause">⏸ 暫停</button>
+      <button class="simbtn stop-s" onclick="inlineStop()">■ 停止</button>
+      <div id="spbar-wrap"><div id="spbar"></div></div>
+      <span id="spbar-label">0/0</span>
+      <select class="spd-sel" id="inl-speed">
+        <option value="3000">3s/幀</option>
+        <option value="2000" selected>2s/幀</option>
+        <option value="1000">1s/幀</option>
+        <option value="500">0.5s</option>
+      </select>
+      <button class="simbtn" onclick="closeInlineSim()" style="color:var(--text-dim);padding:4px 7px">✕</button>
+    </div>
+
+    <div class="sim-badge" id="sim-badge"></div>
+    <div class="statusbar" id="statusbar">游標：— 無人機：0</div>
+    <div class="zoom-controls">
+      <button class="zoom-btn" onclick="changeZoom(1.2)">+</button>
+      <button class="zoom-btn" onclick="changeZoom(1/1.2)">−</button>
+      <button class="zoom-btn" onclick="resetZoom()">⊡</button>
+    </div>
+  </div>
+
+  <!-- Right Panel -->
+  <div class="right-panel">
+    <div class="rp-section">
+      <h3>統計</h3>
+      <div class="stat-row"><span>已放置</span><span class="val" id="stat-placed">0</span></div>
+      <div class="stat-row"><span>目標數</span><span class="val" id="stat-target">16</span></div>
+      <div class="stat-row"><span>差額</span><span class="val" id="stat-diff" style="color:var(--accent2)">-16</span></div>
+      <div class="stat-row"><span>格子寬</span><span class="val" id="stat-cols">20</span></div>
+      <div class="stat-row"><span>格子高</span><span class="val" id="stat-rows">20</span></div>
+    </div>
+
+    <div class="rp-section">
+      <h3>格子尺寸</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;font-size:11px;color:var(--text-dim)">
+        <div>欄<br><input type="number" id="grid-cols" value="20" min="5" max="60" style="width:100%;background:#12191f;border:1px solid #2a3f5a;color:#fff;padding:3px;border-radius:4px;font-family:var(--mono)" oninput="resizeGrid()"></div>
+        <div>列<br><input type="number" id="grid-rows" value="20" min="5" max="60" style="width:100%;background:#12191f;border:1px solid #2a3f5a;color:#fff;padding:3px;border-radius:4px;font-family:var(--mono)" oninput="resizeGrid()"></div>
+      </div>
+    </div>
+
+    <div class="rp-section">
+      <h3>圖例</h3>
+      <div class="legend-item"><div class="legend-dot" style="background:#00d4ff"></div>藍白</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff6b35"></div>橙紅</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ffd700"></div>金黃</div>
+    </div>
+
+    <div class="rp-section">
+      <h3>預覽縮圖</h3>
+      <canvas id="preview-canvas" height="145"></canvas>
+    </div>
+
+    <!-- Real hardware panel -->
+    <div class="rp-section" id="real-panel" style="display:none">
+      <h3>📡 實體連線</h3>
+      <div style="display:flex;align-items:center;margin-bottom:8px">
+        <span class="cdot off" id="cdot"></span>
+        <span id="clabel" style="font-size:12px;color:var(--text-dim)">未連線</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px">Node Gateway</div>
+      <div class="gw-row">
+        <input type="text" id="gw-ip" value="localhost:3000" placeholder="192.168.1.100:3000">
+        <button class="hbtn" onclick="connectGW()" style="padding:4px 7px;font-size:11px">連線</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px">各機 IP <button onclick="buildIPList()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:10px;font-family:var(--mono)">重建</button></div>
+      <div class="ip-list-wrap" id="ip-list"></div>
+      <div class="rcmd-grid">
+        <button class="rcmd to" onclick="realCmd('TAKEOFF')">▲ 起飛</button>
+        <button class="rcmd la" onclick="realCmd('LAND')">▼ 降落</button>
+        <button class="rcmd sy" onclick="realSync()">↗ 同步隊型</button>
+        <button class="rcmd em" onclick="realCmd('EMERGENCY')">⚠ 緊急停止</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-dim);margin:7px 0 4px">通訊紀錄</div>
+      <div class="conn-log" id="conn-log"><div class="info">等待連線…</div></div>
+    </div>
+
+    <div class="rp-section">
+      <h3>匯出設定</h3>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:5px">飛行高度 (m)</div>
+      <input type="number" id="export-alt" value="5" min="1" max="50"
+        style="width:100%;background:#12191f;border:1px solid #2a3f5a;color:var(--accent);padding:4px;border-radius:4px;font-family:var(--mono);font-size:13px;margin-bottom:6px">
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:5px">格子間距 (m)</div>
+      <input type="number" id="export-spacing" value="1.5" min="0.5" max="5" step="0.1"
+        style="width:100%;background:#12191f;border:1px solid #2a3f5a;color:var(--accent);padding:4px;border-radius:4px;font-family:var(--mono);font-size:13px">
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<!-- ═══ Simulation Modal ═══ -->
+<div class="modal-overlay" id="sim-modal">
+  <div class="modal" style="max-width:720px">
+    <h2>▶ 模擬飛行預覽</h2>
+    <div class="sim-stats">
+      <span>隊型：<b id="ss-frame">—</b></span>
+      <span>機數：<b id="ss-count">0</b></span>
+      <span>狀態：<b id="ss-state">待命</b></span>
+      <span>幀進度：<b id="ss-pct">0%</b></span>
+    </div>
+    <div class="sim-canvas-wrap">
+      <canvas id="sim-canvas" height="340"></canvas>
+      <div class="rec-indicator" id="rec-indicator"><div class="rec-dot"></div><span>REC</span><span id="rec-progress" style="margin-left:4px;font-size:10px;color:var(--text-dim)"></span></div>
+    </div>
+    <div class="sim-cmd-row">
+      <button class="scmd g" onclick="simCmd('takeoff')">▲ 起飛</button>
+      <button class="scmd a" onclick="simCmd('play')">▶ 播放序列</button>
+      <button class="scmd" onclick="simCmd('pause')" id="modal-pause-btn">⏸ 暫停</button>
+      <button class="scmd r" onclick="simCmd('stop')">■ 停止</button>
+      <button class="scmd y" onclick="simCmd('land')">▼ 降落</button>
+      <div id="modal-spbar-wrap"><div id="modal-spbar"></div></div>
+      <select class="spd-sel" id="modal-speed">
+        <option value="3000">慢 3s</option>
+        <option value="2000" selected>正常 2s</option>
+        <option value="1000">快 1s</option>
+        <option value="500">極速</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="hbtn" id="rec-mp4-btn" onclick="toggleRecordMP4()" style="border-color:#f5222d;color:#f5222d">⏺ 錄製 MP4</button>
+      <button class="hbtn" id="dl-mp4-btn" onclick="downloadMP4()" style="display:none">⬇ 下載影片</button>
+      <button class="hbtn" onclick="closeSimModal()">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Text Modal ═══ -->
+<div class="modal-overlay" id="text-modal">
+  <div class="modal">
+    <h2>🧧 文字隊型生成</h2>
+    <div class="text-gen-row">
+      <input type="text" id="modal-text-input" placeholder="輸入文字（建議1-2字）" value="吉">
+      <button class="hbtn primary" onclick="genText()">生成</button>
+    </div>
+    <label class="ck"><input type="checkbox" id="modal-sk" checked> 骨架模式（低機數優化）</label>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="hbtn" onclick="qText('福')">福</button>
+      <button class="hbtn" onclick="qText('安')">安</button>
+      <button class="hbtn" onclick="qText('喜')">喜</button>
+      <button class="hbtn" onclick="qText('壽')">壽</button>
+      <button class="hbtn" onclick="qText('SkyNode')">SkyNode</button>
+    </div>
+    <div class="modal-actions"><button class="hbtn" onclick="closeTextModal()">關閉</button></div>
+    <canvas id="text-canvas" width="300" height="300" style="display:none"></canvas>
+  </div>
+</div>
+
+<!-- ═══ JSON Modal ═══ -->
+<div class="modal-overlay" id="json-modal">
+  <div class="modal">
+    <h2>📄 匯出 JSON 舞步</h2>
+    <textarea id="json-output" readonly></textarea>
+    <div class="modal-actions">
+      <button class="hbtn" onclick="downloadJSON()">⬇ 下載</button>
+      <button class="hbtn" onclick="closeJSONModal()">關閉</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// CORE STATE
+// ═══════════════════════════════════════════
+const canvas = document.getElementById('grid-canvas');
+const ctx = canvas.getContext('2d');
+const previewCanvas = document.getElementById('preview-canvas');
+const previewCtx = previewCanvas.getContext('2d');
+const simCanvas = document.getElementById('sim-canvas');
+const simCtx = simCanvas.getContext('2d');
+
+let COLS=20, ROWS=20, CELL=32, zoom=1;
+let grid=[], history=[], frames=[];
+let currentTool='draw', currentColor='#00d4ff';
+let isDragging=false, mouseCell=null;
+
+// Inline sim
+let inlineActive=false, inlineIdx=0, inlineTimeout=null;
+
+// Sim modal
+let simDrones=[], simState='idle', simFIdx=0, simTimeout=null, simAnimId=null;
+
+// Real connection
+let isConnected=false, gatewayUrl='http://localhost:3000';
+let droneIPs=[], pingInterval=null;
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+function initGrid(){grid=Array.from({length:ROWS},()=>Array(COLS).fill(null));}
+function init(){
+  initGrid();resizeCanvas();render();updateStats();bindEvents();renderPreview();buildIPList();
+}
+function resizeCanvas(){
+  const wrap=canvas.parentElement;
+  const maxW=wrap.clientWidth-20,maxH=wrap.clientHeight-80;
+  CELL=Math.max(12,Math.min(Math.floor(Math.min(maxW/COLS,maxH/ROWS)),42));
+  canvas.width=COLS*CELL;canvas.height=ROWS*CELL;render();
+}
+
+// ═══════════════════════════════════════════
+// RENDER GRID
+// ═══════════════════════════════════════════
+function render(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#090c12';ctx.fillRect(0,0,canvas.width,canvas.height);
+  for(let r=0;r<=ROWS;r++){ctx.beginPath();ctx.moveTo(0,r*CELL);ctx.lineTo(COLS*CELL,r*CELL);ctx.strokeStyle=(r%5===0)?'#1e3050':'#142030';ctx.lineWidth=(r%5===0)?1.5:.5;ctx.stroke();}
+  for(let c=0;c<=COLS;c++){ctx.beginPath();ctx.moveTo(c*CELL,0);ctx.lineTo(c*CELL,ROWS*CELL);ctx.strokeStyle=(c%5===0)?'#1e3050':'#142030';ctx.lineWidth=(c%5===0)?1.5:.5;ctx.stroke();}
+  ctx.strokeStyle='rgba(0,212,255,.12)';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+  ctx.beginPath();ctx.moveTo(Math.floor(COLS/2)*CELL,0);ctx.lineTo(Math.floor(COLS/2)*CELL,ROWS*CELL);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,Math.floor(ROWS/2)*CELL);ctx.lineTo(COLS*CELL,Math.floor(ROWS/2)*CELL);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.font=`${Math.max(8,CELL*.27)}px Share Tech Mono,monospace`;ctx.fillStyle='#1e3050';
+  ctx.textAlign='center';for(let c=0;c<COLS;c+=5)ctx.fillText(c,c*CELL+CELL/2,9);
+  ctx.textAlign='right';for(let r=0;r<ROWS;r+=5)ctx.fillText(r,CELL-2,r*CELL+CELL*.65);
+  const pl=getPlaced();
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)if(grid[r][c])drawDrone(ctx,c*CELL+CELL/2,r*CELL+CELL/2,CELL,grid[r][c],pl.findIndex(d=>d.r===r&&d.c===c)+1);
+  if(mouseCell){const{r,c}=mouseCell;if(r>=0&&r<ROWS&&c>=0&&c<COLS){ctx.fillStyle=currentTool==='erase'?'rgba(245,34,45,.12)':'rgba(0,212,255,.08)';ctx.fillRect(c*CELL+.5,r*CELL+.5,CELL-1,CELL-1);ctx.strokeStyle=currentTool==='erase'?'#f5222d':currentColor;ctx.lineWidth=1.5;ctx.strokeRect(c*CELL+.5,r*CELL+.5,CELL-1,CELL-1);}}
+}
+
+function drawDrone(c2d,cx,cy,cs,color,id){
+  const pad=cs*.12,radius=cs/2-pad;
+  const grd=c2d.createRadialGradient(cx,cy,0,cx,cy,radius*1.6);
+  grd.addColorStop(0,color+'99');grd.addColorStop(1,color+'00');
+  c2d.fillStyle=grd;c2d.beginPath();c2d.arc(cx,cy,radius*1.6,0,Math.PI*2);c2d.fill();
+  c2d.fillStyle=color;c2d.beginPath();c2d.arc(cx,cy,radius*.52,0,Math.PI*2);c2d.fill();
+  const armLen=radius*.83;c2d.strokeStyle=color+'cc';c2d.lineWidth=Math.max(1,cs*.055);
+  for(let i=0;i<4;i++){const a=(i*Math.PI/2)+Math.PI/4;c2d.beginPath();c2d.moveTo(cx,cy);c2d.lineTo(cx+Math.cos(a)*armLen,cy+Math.sin(a)*armLen);c2d.stroke();}
+  for(let i=0;i<4;i++){const a=(i*Math.PI/2)+Math.PI/4;c2d.fillStyle=color;c2d.beginPath();c2d.arc(cx+Math.cos(a)*armLen,cy+Math.sin(a)*armLen,Math.max(1.5,cs*.09),0,Math.PI*2);c2d.fill();}
+  if(cs>=20&&id>0){c2d.fillStyle='rgba(0,0,0,.65)';c2d.beginPath();c2d.arc(cx,cy,radius*.52,0,Math.PI*2);c2d.fill();c2d.fillStyle='#fff';c2d.font=`bold ${Math.max(6,cs*.2)}px Share Tech Mono,monospace`;c2d.textAlign='center';c2d.textBaseline='middle';c2d.fillText(id,cx,cy);}
+}
+
+function renderPreview(){
+  const pw=previewCanvas.offsetWidth||180;previewCanvas.width=pw;previewCanvas.height=145;
+  previewCtx.fillStyle='#090c12';previewCtx.fillRect(0,0,pw,145);
+  const cw=pw/COLS,ch=145/ROWS;
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)if(grid[r][c]){previewCtx.fillStyle=grid[r][c];previewCtx.beginPath();previewCtx.arc(c*cw+cw/2,r*ch+ch/2,Math.min(cw,ch)*.38,0,Math.PI*2);previewCtx.fill();}
+}
+
+// ═══════════════════════════════════════════
+// EVENTS
+// ═══════════════════════════════════════════
+function bindEvents(){
+  canvas.addEventListener('mousedown',e=>{if(e.button===2)return;isDragging=true;saveHistory();const cell=getCell(e);if(cell)doCell(cell.r,cell.c);});
+  canvas.addEventListener('mousemove',e=>{const cell=getCell(e);mouseCell=cell;if(isDragging&&cell)doCell(cell.r,cell.c);if(cell){const t=document.getElementById('tooltip');t.style.display='block';t.style.left=(e.clientX+13)+'px';t.style.top=(e.clientY-8)+'px';const has=grid[cell.r][cell.c];t.textContent=`[${cell.c},${cell.r}]${has?' #'+idxOf(cell.r,cell.c):''}`;} else document.getElementById('tooltip').style.display='none';render();updateStatus(cell);});
+  canvas.addEventListener('mouseup',()=>isDragging=false);
+  canvas.addEventListener('mouseleave',()=>{mouseCell=null;render();updateStatus();document.getElementById('tooltip').style.display='none';});
+  canvas.addEventListener('contextmenu',e=>{e.preventDefault();const cell=getCell(e);if(cell)erase(cell.r,cell.c);});
+  canvas.addEventListener('touchstart',e=>{e.preventDefault();isDragging=true;const t=e.touches[0];const cell=getXY(t.clientX,t.clientY);if(cell){saveHistory();doCell(cell.r,cell.c);}},{passive:false});
+  canvas.addEventListener('touchmove',e=>{e.preventDefault();const t=e.touches[0];const cell=getXY(t.clientX,t.clientY);if(cell&&isDragging)doCell(cell.r,cell.c);},{passive:false});
+  canvas.addEventListener('touchend',()=>isDragging=false);
+  document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;if(e.key==='d'||e.key==='D')setTool('draw');if(e.key==='e'||e.key==='E')setTool('erase');if(e.key==='s'||e.key==='S')setTool('select');if(e.key==='f'||e.key==='F')setTool('fill');if((e.ctrlKey||e.metaKey)&&e.key==='z')undoAction();if(e.key==='Delete'||e.key==='Backspace')clearCanvas();});
+  window.addEventListener('resize',()=>{resizeCanvas();renderPreview();});
+}
+
+function getCell(e){return getXY(e.clientX,e.clientY);}
+function getXY(cx,cy){const rect=canvas.getBoundingClientRect();const sx=canvas.width/rect.width,sy=canvas.height/rect.height;const c=Math.floor((cx-rect.left)*sx/CELL),r=Math.floor((cy-rect.top)*sy/CELL);return(r>=0&&r<ROWS&&c>=0&&c<COLS)?{r,c}:null;}
+function doCell(r,c){if(currentTool==='draw'){grid[r][c]=currentColor;render();updateStats();renderPreview();}else if(currentTool==='erase')erase(r,c);else if(currentTool==='fill'){fill(r,c,currentColor);render();updateStats();renderPreview();}}
+function erase(r,c){saveHistory();grid[r][c]=null;render();updateStats();renderPreview();}
+function idxOf(tr,tc){const p=getPlaced();return p.findIndex(d=>d.r===tr&&d.c===tc)+1;}
+function fill(sr,sc,fc){const tgt=grid[sr][sc];if(tgt===fc)return;const stk=[[sr,sc]],vis=new Set();while(stk.length){const[r,c]=stk.pop();const k=r+','+c;if(vis.has(k)||r<0||r>=ROWS||c<0||c>=COLS||grid[r][c]!==tgt)continue;vis.add(k);grid[r][c]=fc;stk.push([r+1,c],[r-1,c],[r,c+1],[r,c-1]);}}
+function setTool(t){currentTool=t;document.querySelectorAll('.tool-btn').forEach(b=>b.classList.remove('active'));document.getElementById('tool-'+t)?.classList.add('active');}
+function setColor(el){currentColor=el.dataset.color;document.querySelectorAll('.swatch').forEach(s=>s.classList.remove('active'));el.classList.add('active');}
+function saveHistory(){history.push(grid.map(row=>[...row]));if(history.length>30)history.shift();}
+function undoAction(){if(!history.length)return;grid=history.pop();render();updateStats();renderPreview();}
+function clearCanvas(){saveHistory();initGrid();render();updateStats();renderPreview();}
+function clearAll(){if(!confirm('確定要清除畫布和所有序列？'))return;initGrid();frames=[];render();updateStats();renderPreview();renderFrameList();}
+function fillSymmetry(){saveHistory();for(let r=0;r<ROWS;r++)for(let c=0;c<Math.floor(COLS/2);c++){const m=COLS-1-c;if(grid[r][c])grid[r][m]=grid[r][c];else if(grid[r][m])grid[r][c]=grid[r][m];}render();updateStats();renderPreview();}
+function resizeGrid(){COLS=Math.max(5,Math.min(60,parseInt(document.getElementById('grid-cols').value)||20));ROWS=Math.max(5,Math.min(60,parseInt(document.getElementById('grid-rows').value)||20));document.getElementById('stat-cols').textContent=COLS;document.getElementById('stat-rows').textContent=ROWS;document.getElementById('canvas-label').textContent=`2D 隊型編輯區 — 格子：${COLS}×${ROWS}`;grid=Array.from({length:ROWS},(_,r)=>Array.from({length:COLS},(_,c)=>(grid[r]&&grid[r][c])?grid[r][c]:null));saveHistory();resizeCanvas();render();updateStats();renderPreview();}
+
+// ═══════════════════════════════════════════
+// PRESETS
+// ═══════════════════════════════════════════
+function applyPreset(type){
+  saveHistory();initGrid();
+  const cx=COLS/2,cy=ROWS/2,r=Math.min(cx,cy)*.77,pts=[],N=parseInt(document.getElementById('drone-count').value)||16;
+  if(type==='circle'){for(let i=0;i<N;i++){const a=(i/N)*Math.PI*2;pts.push([Math.round(cy+r*Math.sin(a)),Math.round(cx+r*Math.cos(a))]);}}
+  else if(type==='diamond'){const s=Math.floor(r);for(let i=-s;i<=s;i++){const w=s-Math.abs(i);pts.push([Math.round(cy+i),Math.round(cx-w)]);if(w)pts.push([Math.round(cy+i),Math.round(cx+w)]);}}
+  else if(type==='star'){const n=5,r2=r*.4;for(let i=0;i<n*2;i++){const a=(i/(n*2))*Math.PI*2-Math.PI/2,rr=i%2===0?r:r2;const na=((i+1)/(n*2))*Math.PI*2-Math.PI/2,nr=((i+1)%(n*2)===0?r:r2);const[pr,pc]=[Math.round(cy+rr*Math.sin(a)),Math.round(cx+rr*Math.cos(a))];const[qr,qc]=[Math.round(cy+nr*Math.sin(na)),Math.round(cx+nr*Math.cos(na))];const st=Math.max(Math.abs(qr-pr),Math.abs(qc-pc));for(let s=0;s<=st;s++)pts.push([Math.round(pr+(qr-pr)*s/st),Math.round(pc+(qc-pc)*s/st)]);}}
+  else if(type==='heart'){for(let t=0;t<=Math.PI*2;t+=.12){const x=16*Math.pow(Math.sin(t),3),y=-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t));pts.push([Math.round(cy+y*(r/16)),Math.round(cx+x*(r/16))]);}}
+  else if(type==='octagon'){for(let i=0;i<8;i++){const a=(i/8)*Math.PI*2,a2=((i+1)/8)*Math.PI*2;const[pr,pc]=[Math.round(cy+r*Math.sin(a)),Math.round(cx+r*Math.cos(a))];const[qr,qc]=[Math.round(cy+r*Math.sin(a2)),Math.round(cx+r*Math.cos(a2))];const st=Math.max(Math.abs(qr-pr),Math.abs(qc-pc));for(let s=0;s<=st;s++)pts.push([Math.round(pr+(qr-pr)*s/st),Math.round(pc+(qc-pc)*s/st)]);}}
+  else if(type==='arrow'){for(let rr=-2;rr<=2;rr++)for(let cc=-Math.floor(r);cc<=0;cc++)pts.push([Math.round(cy+rr),Math.round(cx+cc)]);for(let rr=-Math.floor(r);rr<=Math.floor(r);rr++)pts.push([Math.round(cy+rr),Math.round(cx+Math.floor(r)-Math.abs(rr))]);}
+  else if(type==='cross'){for(let i=-Math.floor(r);i<=Math.floor(r);i++)for(let j=-2;j<=2;j++){pts.push([Math.round(cy+i),Math.round(cx+j)]);pts.push([Math.round(cy+j),Math.round(cx+i)]);}}
+  else if(type==='spiral'){for(let i=0;i<N*4;i++){const a=i*.28,rr=(i/(N*4))*r;pts.push([Math.round(cy+rr*Math.sin(a)),Math.round(cx+rr*Math.cos(a))]);}}
+  else if(type==='wave'){for(let c2=0;c2<COLS;c2++)pts.push([Math.round(cy+Math.sin((c2/COLS)*Math.PI*4)*(r*.5)),c2]);}
+  else if(type==='lotus'){for(let k=0;k<6;k++){const ba=(k/6)*Math.PI*2;for(let t=0;t<=Math.PI;t+=.18){const rr=r*.6*Math.sin(t),pa=ba+t-Math.PI/2;pts.push([Math.round(cy+rr*Math.sin(pa)),Math.round(cx+rr*Math.cos(pa))]);}}}
+  const seen=new Set();for(const[pr,pc]of pts)if(pr>=0&&pr<ROWS&&pc>=0&&pc<COLS){const k=pr+','+pc;if(!seen.has(k)){seen.add(k);grid[pr][pc]=currentColor;}}
+  render();updateStats();renderPreview();
+}
+
+// ═══════════════════════════════════════════
+// TEXT FORMATION
+// ═══════════════════════════════════════════
+function openTextModal(){document.getElementById('text-modal').classList.add('open');}
+function closeTextModal(){document.getElementById('text-modal').classList.remove('open');}
+function qText(t){document.getElementById('modal-text-input').value=t;genText();}
+function genText(){
+  const text=document.getElementById('modal-text-input').value||'吉';
+  const sk=document.getElementById('modal-sk').checked;
+  const tc=document.getElementById('text-canvas'),tctx=tc.getContext('2d');
+  tctx.clearRect(0,0,300,300);tctx.fillStyle='white';
+  tctx.font=`bold ${text.length>1?110:210}px sans-serif`;tctx.textAlign='center';tctx.textBaseline='middle';tctx.fillText(text,150,150);
+  const img=tctx.getImageData(0,0,300,300).data,pts=[],step=sk?8:4;
+  for(let y=0;y<300;y+=step)for(let x=0;x<300;x+=step)if(img[(y*300+x)*4]>128){const gc=Math.floor((x/300)*COLS),gr=Math.floor((y/300)*ROWS);if(gc>=0&&gc<COLS&&gr>=0&&gr<ROWS)pts.push([gr,gc]);}
+  saveHistory();initGrid();const seen=new Set();for(const[r,c]of pts){const k=r+','+c;if(!seen.has(k)){seen.add(k);grid[r][c]=currentColor;}}
+  render();updateStats();renderPreview();closeTextModal();
+}
+
+// ═══════════════════════════════════════════
+// SEQUENCE
+// ═══════════════════════════════════════════
+function getPlaced(){const p=[];for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)if(grid[r][c])p.push({r,c,color:grid[r][c]});return p;}
+function recordFrame(){const p=getPlaced();if(!p.length){alert('畫布上沒有無人機');return;}frames.push({grid:grid.map(row=>[...row]),drone_count:p.length,label:`隊型 ${frames.length+1}`});renderFrameList();}
+function renderFrameList(){
+  const el=document.getElementById('frame-list');
+  if(!frames.length){el.innerHTML='<div style="font-size:11px;color:#2a5070;padding:4px">尚無錄製隊型</div>';return;}
+  el.innerHTML=frames.map((f,i)=>`<div class="frame-item" onclick="loadFrame(${i})"><span class="fn">${i+1}</span><span>${f.label}</span><span class="fc">${f.drone_count}台</span><button class="del-btn" onclick="delFrame(event,${i})">×</button></div>`).join('');
+}
+function loadFrame(idx){if(!frames[idx])return;saveHistory();grid=frames[idx].grid.map(r=>[...r]);render();updateStats();renderPreview();document.querySelectorAll('.frame-item').forEach((el,i)=>el.classList.toggle('active-frame',i===idx));}
+function delFrame(e,idx){e.stopPropagation();frames.splice(idx,1);renderFrameList();}
+
+// ═══════════════════════════════════════════
+// INLINE SEQUENCE PLAYER
+// ═══════════════════════════════════════════
+function toggleInlineSim(){
+  if(!frames.length){alert('請先錄製序列隊型');return;}
+  if(inlineActive){closeInlineSim();}else{openInlineSim();}
+}
+function openInlineSim(){
+  inlineActive=true;inlineIdx=0;
+  document.getElementById('sim-bar').classList.add('visible');
+  document.getElementById('sim-badge').className='sim-badge sim';document.getElementById('sim-badge').textContent='◉ 序列模式';
+  document.getElementById('inline-sim-btn').classList.add('sim-running');document.getElementById('inline-sim-btn').textContent='⏸ 序列播放';
+  document.getElementById('spbar-label').textContent=`0/${frames.length}`;
+}
+function closeInlineSim(){
+  inlineActive=false;clearTimeout(inlineTimeout);inlineIdx=0;
+  document.getElementById('sim-bar').classList.remove('visible');
+  document.getElementById('sim-badge').className='sim-badge';
+  document.getElementById('inline-sim-btn').classList.remove('sim-running');document.getElementById('inline-sim-btn').textContent='⏵ 序列播放';
+  document.getElementById('spbar').style.width='0%';
+  if(frames.length)loadFrame(0);
+}
+function inlinePlay(){
+  if(!inlineActive)openInlineSim();
+  _runInline();
+}
+function _runInline(){
+  if(!inlineActive)return;
+  if(inlineIdx>=frames.length){document.getElementById('spbar-label').textContent=`${frames.length}/${frames.length}`;document.getElementById('spbar').style.width='100%';return;}
+  loadFrame(inlineIdx);
+  document.getElementById('spbar-label').textContent=`${inlineIdx+1}/${frames.length}`;
+  document.getElementById('spbar').style.width=((inlineIdx+1)/frames.length*100)+'%';
+  inlineIdx++;
+  const spd=parseInt(document.getElementById('inl-speed').value)||2000;
+  inlineTimeout=setTimeout(_runInline,spd);
+}
+function inlinePause(){clearTimeout(inlineTimeout);}
+function inlineStop(){clearTimeout(inlineTimeout);inlineIdx=0;document.getElementById('spbar').style.width='0%';document.getElementById('spbar-label').textContent=`0/${frames.length}`;}
+
+// ═══════════════════════════════════════════
+// SIMULATION MODAL — animated 2D flight view
+// ═══════════════════════════════════════════
+function openSimModal(){
+  const hasDrones=getPlaced().length>0||frames.length>0;
+  if(!hasDrones){alert('請先放置無人機或錄製序列');return;}
+  document.getElementById('sim-modal').classList.add('open');
+  const mw=document.querySelector('#sim-modal .modal').clientWidth||680;
+  simCanvas.width=mw-44;simCanvas.height=340;
+  // Init drones from current view, parked on ground
+  _simInitDrones(frames.length?frames[0].grid:grid);
+  simState='idle';simFIdx=0;
+  updateSimUI();
+  if(simAnimId)cancelAnimationFrame(simAnimId);
+  _simLoop();
+}
+function closeSimModal(){document.getElementById('sim-modal').classList.remove('open');if(simAnimId)cancelAnimationFrame(simAnimId);clearTimeout(simTimeout);}
+
+function _simInitDrones(srcGrid,keepPos=false){
+  const placed=[];for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)if(srcGrid[r]&&srcGrid[r][c])placed.push({r,c,color:srcGrid[r][c]});
+  const W=simCanvas.width,H=simCanvas.height;
+  const cellW=W/COLS,cellH=(H*.75)/ROWS;
+  if(!keepPos||simDrones.length===0){
+    simDrones=placed.map((d,i)=>({id:i+1,color:d.color,x:W/2+(i-placed.length/2)*8,y:H*.94,tx:d.c*cellW+cellW/2,ty:d.r*cellH+H*.1,alpha:1}));
+  } else {
+    // Reassign targets only
+    placed.forEach((d,i)=>{
+      if(simDrones[i]){simDrones[i].tx=d.c*cellW+cellW/2;simDrones[i].ty=d.r*cellH+H*.1;simDrones[i].color=d.color;}
+      else simDrones.push({id:i+1,color:d.color,x:W*.5,y:H*.94,tx:d.c*cellW+cellW/2,ty:d.r*cellH+H*.1,alpha:1});
+    });
+    if(simDrones.length>placed.length)simDrones=simDrones.slice(0,placed.length);
+  }
+}
+
+function simCmd(cmd){
+  if(cmd==='takeoff'){
+    const W=simCanvas.width,H=simCanvas.height,cellW=W/COLS,cellH=(H*.75)/ROWS;
+    const srcGrid=frames.length?frames[0].grid:grid;
+    _simInitDrones(srcGrid,false);
+    simState='taking-off';
+    // Phase 1: rise to hover altitude
+    simDrones.forEach(d=>{d.y=H*.94;});
+    setTimeout(()=>{
+      const hoverY=H*.35;
+      simDrones.forEach(d=>{d.ty=hoverY;});
+      simState='hovering';updateSimUI();
+      // Phase 2: spread to formation
+      setTimeout(()=>{
+        const placed=[];for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)if(srcGrid[r]&&srcGrid[r][c])placed.push({r,c,color:srcGrid[r][c]});
+        placed.forEach((p,i)=>{if(simDrones[i]){simDrones[i].tx=p.c*cellW+cellW/2;simDrones[i].ty=p.r*cellH+H*.1;}});
+        simState='formation';updateSimUI();
+      },1800);
+    },400);
+  }
+  else if(cmd==='play'){
+    if(!frames.length){alert('沒有序列，請先錄製隊型');return;}
+    simState='flying';simFIdx=0;_simRunFrame();
+  }
+  else if(cmd==='pause'){
+    if(simState==='flying'){simState='paused';clearTimeout(simTimeout);}
+    else if(simState==='paused'){simState='flying';_simRunFrame();}
+    updateSimUI();
+  }
+  else if(cmd==='stop'){
+    simState='idle';clearTimeout(simTimeout);simFIdx=0;
+    document.getElementById('modal-spbar').style.width='0%';
+    updateSimUI();
+  }
+  else if(cmd==='land'){
+    simState='landing';clearTimeout(simTimeout);
+    const H=simCanvas.height;
+    simDrones.forEach(d=>{d.tx=simCanvas.width/2+(d.id-simDrones.length/2)*6;d.ty=H*.92;});
+    setTimeout(()=>{simDrones.forEach(d=>{d.ty=H*.96;d.alpha=.35;});simState='grounded';updateSimUI();},1600);
+  }
+}
+
+function _simRunFrame(){
+  if(simState==='stopped'||simState==='idle'||simState==='paused')return;
+  if(simFIdx>=frames.length){simState='done';updateSimUI();document.getElementById('modal-spbar').style.width='100%';return;}
+  const f=frames[simFIdx];
+  _simInitDrones(f.grid,true);
+  document.getElementById('ss-frame').textContent=f.label;
+  document.getElementById('ss-count').textContent=simDrones.length;
+  document.getElementById('ss-pct').textContent=Math.round((simFIdx/frames.length)*100)+'%';
+  document.getElementById('modal-spbar').style.width=((simFIdx+1)/frames.length*100)+'%';
+  simFIdx++;
+  const spd=parseInt(document.getElementById('modal-speed').value)||2000;
+  simTimeout=setTimeout(_simRunFrame,spd);
+}
+
+function updateSimUI(){
+  const labels={idle:'待命',hovering:'懸停','taking-off':'起飛中',formation:'就位',flying:'飛行中',paused:'已暫停',landing:'降落中',grounded:'已落地',done:'演出完畢'};
+  const colors={flying:'#39ff14',formation:'#00d4ff','taking-off':'#ffd700',paused:'#ff6b35',grounded:'#4a6070',done:'#00d4ff'};
+  const lbl=document.getElementById('ss-state');
+  lbl.textContent=labels[simState]||simState;lbl.style.color=colors[simState]||'#c8dff0';
+  document.getElementById('ss-count').textContent=simDrones.length;
+  const pb=document.getElementById('modal-pause-btn');
+  pb.textContent=simState==='paused'?'▶ 繼續':'⏸ 暫停';
+}
+
+function _simLoop(){
+  if(!document.getElementById('sim-modal').classList.contains('open'))return;
+  simAnimId=requestAnimationFrame(_simLoop);
+  const W=simCanvas.width,H=simCanvas.height;
+  const cellW=W/COLS,cellH=(H*.75)/ROWS;
+  const cs=Math.min(cellW,cellH)*.8;
+
+  // Lerp
+  simDrones.forEach(d=>{d.x+=(d.tx-d.x)*.07;d.y+=(d.ty-d.y)*.07;});
+
+  simCtx.fillStyle='#050810';simCtx.fillRect(0,0,W,H);
+
+  // Sky gradient
+  const sky=simCtx.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,'#050a16');sky.addColorStop(.7,'#080c14');sky.addColorStop(1,'#0a1018');
+  simCtx.fillStyle=sky;simCtx.fillRect(0,0,W,H);
+
+  // Stars
+  simCtx.fillStyle='rgba(200,220,255,.3)';
+  for(let i=0;i<40;i++){const sx=(i*137.5%W),sy=(i*97.3%H*.55);simCtx.fillRect(sx,sy,1,1);}
+
+  // Grid hint
+  simCtx.strokeStyle='rgba(30,48,80,.3)';simCtx.lineWidth=.5;
+  for(let c=0;c<=COLS;c++){simCtx.beginPath();simCtx.moveTo(c*cellW,0);simCtx.lineTo(c*cellW,H*.85);simCtx.stroke();}
+  for(let r=0;r<=ROWS;r++){simCtx.beginPath();simCtx.moveTo(0,r*cellH+H*.1);simCtx.lineTo(W,r*cellH+H*.1);simCtx.stroke();}
+
+  // Ground
+  const gnd=simCtx.createLinearGradient(0,H*.88,0,H);gnd.addColorStop(0,'#0d1810');gnd.addColorStop(1,'#0a1208');
+  simCtx.fillStyle=gnd;simCtx.fillRect(0,H*.88,W,H*.12);
+  simCtx.strokeStyle='#1e4030';simCtx.lineWidth=1.5;simCtx.setLineDash([]);
+  simCtx.beginPath();simCtx.moveTo(0,H*.88);simCtx.lineTo(W,H*.88);simCtx.stroke();
+  simCtx.fillStyle='#1e4030';simCtx.font='9px Share Tech Mono,monospace';
+  simCtx.textAlign='center';simCtx.fillText('地面  GROUND',W/2,H*.97);
+
+  // Landing pads
+  simDrones.forEach(d=>{
+    const gx=d.tx,gy=H*.91;
+    simCtx.fillStyle='rgba(30,48,30,.6)';simCtx.beginPath();
+    simCtx.ellipse(gx,gy,cs*.55,cs*.12,0,0,Math.PI*2);simCtx.fill();
+    simCtx.strokeStyle='#1e4030';simCtx.lineWidth=.8;simCtx.stroke();
+  });
+
+  // Altitude lines + shadows
+  simDrones.forEach(d=>{
+    // Shadow
+    const dist=Math.max(0,(H*.88-d.y)/(H*.88));
+    simCtx.fillStyle=`rgba(0,0,0,${.25*(1-dist)})`;simCtx.beginPath();
+    simCtx.ellipse(d.x,H*.89,cs*.35*(1-dist*.5),cs*.07*(1-dist*.5),0,0,Math.PI*2);simCtx.fill();
+    // Altitude line
+    simCtx.strokeStyle=d.color+'28';simCtx.lineWidth=.8;simCtx.setLineDash([2,5]);
+    simCtx.beginPath();simCtx.moveTo(d.x,d.y+cs*.25);simCtx.lineTo(d.x,H*.88);simCtx.stroke();
+    simCtx.setLineDash([]);
+  });
+
+  // Draw drones
+  simDrones.forEach(d=>{
+    simCtx.globalAlpha=d.alpha||1;
+    drawDrone(simCtx,d.x,d.y,cs,d.color,d.id);
+    simCtx.globalAlpha=1;
+  });
+
+  // State overlay
+  simCtx.font='11px Share Tech Mono,monospace';simCtx.fillStyle='rgba(0,212,255,.4)';
+  simCtx.textAlign='left';simCtx.fillText(`STATE: ${simState.toUpperCase()}  DRONES: ${simDrones.length}`,8,H-.5);
+}
+
+// ═══════════════════════════════════════════
+// REAL HARDWARE CONNECTION
+// ═══════════════════════════════════════════
+function toggleRealPanel(){
+  const panel=document.getElementById('real-panel');
+  const visible=panel.style.display!=='none';
+  panel.style.display=visible?'none':'block';
+  const btn=document.getElementById('real-btn');
+  btn.textContent=visible?'📡 實體連線':'📡 收起連線';
+  btn.classList.toggle('connected',!visible&&isConnected);
+}
+
+function buildIPList(){
+  const count=parseInt(document.getElementById('drone-count').value)||16;
+  droneIPs=[];
+  for(let i=0;i<count;i++)droneIPs.push(localStorage.getItem(`dn_ip_${i}`)||`192.168.1.${101+i}`);
+  renderIPList();
+}
+
+function renderIPList(){
+  const el=document.getElementById('ip-list');
+  el.innerHTML=droneIPs.map((ip,i)=>`<div class="ip-row"><span class="did">#${i+1}</span><input type="text" value="${ip}" onchange="droneIPs[${i}]=this.value;localStorage.setItem('dn_ip_${i}',this.value)" placeholder="192.168.1.xxx"><div class="pdot" id="pdot-${i}"></div></div>`).join('');
+}
+
+async function connectGW(){
+  const raw=document.getElementById('gw-ip').value||'localhost:3000';
+  gatewayUrl='http://'+raw.replace(/^https?:\/\//,'');
+  setConnDot('cing');clog('info',`連線至 ${gatewayUrl} …`);
+  try{
+    const res=await fetch(gatewayUrl+'/status',{method:'GET',signal:AbortSignal.timeout(3000)});
+    const data=await res.json().catch(()=>({}));
+    isConnected=true;setConnDot('on');
+    clog('ok',`✓ Gateway 已上線！版本：${data.version||'—'}，機數：${data.drone_count||'?'}`);
+    document.getElementById('real-btn').classList.add('connected');
+    startPing();
+  }catch(err){isConnected=false;setConnDot('off');clog('err',`✗ 連線失敗：${err.message}`);}
+}
+
+function setConnDot(s){
+  document.getElementById('cdot').className='cdot '+s;
+  document.getElementById('clabel').textContent={off:'未連線',cing:'連線中…',on:'已連線'}[s]||s;
+  document.getElementById('clabel').style.color={off:'#4a6070',cing:'#ff6b35',on:'#39ff14'}[s]||'#c8dff0';
+}
+
+function clog(type,msg){
+  const el=document.getElementById('conn-log');
+  const div=document.createElement('div');div.className=type;
+  div.textContent=`[${new Date().toLocaleTimeString('zh-TW')}] ${msg}`;
+  el.appendChild(div);el.scrollTop=el.scrollHeight;
+}
+
+function startPing(){
+  if(pingInterval)clearInterval(pingInterval);
+  pingInterval=setInterval(async()=>{
+    for(let i=0;i<droneIPs.length;i++){
+      const dot=document.getElementById('pdot-'+i);if(!dot)continue;
+      try{await fetch(`${gatewayUrl}/ping`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ip:droneIPs[i]}),signal:AbortSignal.timeout(1500)});dot.className='pdot ok';}
+      catch{dot.className='pdot fail';}
+    }
+  },5000);
+}
+
+async function realCmd(action){
+  if(!isConnected){clog('err','尚未連線');return;}
+  clog('info',`→ 發送 ${action} (${droneIPs.length} 台)`);
+  try{
+    const res=await fetch(gatewayUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,ips:droneIPs})});
+    const data=await res.json().catch(()=>({}));
+    clog('ok',`✓ ${action} 已接受 ${JSON.stringify(data).slice(0,50)}`);
+  }catch(err){clog('err',`✗ ${action} 失敗：${err.message}`);}
+}
+
+async function realSync(){
+  if(!isConnected){clog('err','尚未連線');return;}
+  const sp=parseFloat(document.getElementById('export-spacing').value)||1.5;
+  const alt=parseFloat(document.getElementById('export-alt').value)||5;
+  const placed=getPlaced();if(!placed.length){clog('err','畫布上沒有無人機');return;}
+  clog('info',`同步 ${placed.length} 台座標 …`);
+  const results=await Promise.all(placed.map((d,i)=>{
+    const x=(d.c-COLS/2)*sp,y=alt,z=(d.r-ROWS/2)*sp,ip=droneIPs[i]||droneIPs[droneIPs.length-1]||`192.168.1.${101+i}`;
+    return fetch(gatewayUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:i,ip,action:'GOTO',x,y,z,color:d.color})}).catch(e=>({error:e.message}));
+  }));
+  const ok=results.filter(r=>!r?.error).length;
+  clog('ok',`✓ 同步完成：${ok}/${placed.length} 台成功`);
+}
+
+// ═══════════════════════════════════════════
+// EXPORT / IMPORT
+// ═══════════════════════════════════════════
+function exportJSON(){
+  const alt=parseFloat(document.getElementById('export-alt').value)||5;
+  const sp=parseFloat(document.getElementById('export-spacing').value)||1.5;
+  const dc=parseInt(document.getElementById('drone-count').value)||16;
+  const ef=frames.length?frames.map(f=>gridToFrame(f.grid,alt,sp)):[gridToFrame(grid,alt,sp)];
+  const data={version:'SkyNode_Pro_V1',drone_count:dc,timestamp:new Date().toISOString(),grid_info:{cols:COLS,rows:ROWS,cell_spacing_m:sp},frames:ef};
+  document.getElementById('json-output').value=JSON.stringify(data,null,2);
+  document.getElementById('json-modal').classList.add('open');
+}
+function gridToFrame(g,alt,sp){const f=[];for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)if(g[r]&&g[r][c])f.push({x:(c-COLS/2)*sp,y:alt,z:(r-ROWS/2)*sp,color:g[r][c]});return f;}
+function downloadJSON(){const t=document.getElementById('json-output').value;const b=new Blob([t],{type:'application/json'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=`DroneShow_2D_${Date.now()}.json`;a.click();}
+function closeJSONModal(){document.getElementById('json-modal').classList.remove('open');}
+function importJSON(){
+  const input=document.createElement('input');input.type='file';input.accept='.json';
+  input.onchange=e=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{try{const data=JSON.parse(ev.target.result);if(data.frames&&data.frames.length){saveHistory();frames=data.frames.map((f,i)=>({grid:frameToGrid(f),drone_count:f.length,label:`匯入 ${i+1}`}));loadFrame(0);renderFrameList();alert(`匯入成功！共 ${frames.length} 個隊型`);}else alert('JSON 內無 frames');}catch{alert('格式錯誤');}};reader.readAsText(file);};input.click();
+}
+function frameToGrid(frame){const sp=parseFloat(document.getElementById('export-spacing').value)||1.5;const ng=Array.from({length:ROWS},()=>Array(COLS).fill(null));for(const pt of frame){const c=Math.round(pt.x/sp+COLS/2),r=Math.round(pt.z/sp+ROWS/2);if(r>=0&&r<ROWS&&c>=0&&c<COLS)ng[r][c]=pt.color||currentColor;}return ng;}
+
+// ═══════════════════════════════════════════
+// STATS / STATUS
+// ═══════════════════════════════════════════
+function updateStats(){
+  const placed=getPlaced().length,target=parseInt(document.getElementById('drone-count').value)||16,diff=placed-target;
+  document.getElementById('stat-placed').textContent=placed;document.getElementById('stat-target').textContent=target;
+  const el=document.getElementById('stat-diff');el.textContent=diff>=0?'+'+diff:diff;el.style.color=diff===0?'#39ff14':diff>0?'#ff6b35':'#f5222d';
+}
+function updateStatus(cell){
+  const placed=getPlaced().length,pos=cell?`(${cell.c},${cell.r})`:'—';
+  document.getElementById('statusbar').textContent=`游標：${pos}　無人機：${placed}`;
+}
+function changeZoom(f){zoom=Math.max(.4,Math.min(3,zoom*f));canvas.style.transform=`scale(${zoom})`;canvas.style.transformOrigin='center center';}
+function resetZoom(){zoom=1;canvas.style.transform='scale(1)';}
+
+// ═══════════════════════════════════════════
+// START
+// ═══════════════════════════════════════════
+init();
+renderFrameList();
+document.getElementById('drone-count').addEventListener('input',()=>{buildIPList();updateStats();});
+</script>
+
+<!-- ═══ Image → Drone Modal ═══ -->
+<div class="modal-overlay" id="img2drone-modal">
+  <div class="modal" style="max-width:680px">
+    <h2>🖼 圖片轉無人機位置</h2>
+    <div class="img2d-mode-tabs">
+      <button class="img2d-tab active" id="tab-edge" onclick="setImg2dMode('edge')">邊緣偵測</button>
+      <button class="img2d-tab" id="tab-bright" onclick="setImg2dMode('bright')">亮度採樣</button>
+      <button class="img2d-tab" id="tab-color" onclick="setImg2dMode('color')">彩色保留</button>
+    </div>
+    <div class="img2d-row">
+      <div class="img2d-drop" id="img2d-drop" ondragover="img2dDragOver(event)" ondragleave="img2dDragLeave()" ondrop="img2dDrop(event)">
+        <input type="file" accept="image/*" onchange="img2dLoad(this.files[0])">
+        <div style="font-size:28px;margin-bottom:6px">📁</div>
+        <div>點擊或拖曳圖片到此處</div>
+        <div style="font-size:10px;margin-top:4px;color:#2a5070">PNG / JPG / GIF / WebP</div>
+      </div>
+      <div id="img2d-preview-wrap">
+        <div style="font-size:10px;color:var(--text-dim);margin-bottom:4px">原圖預覽</div>
+        <canvas id="img2d-src-canvas" width="220" height="160"></canvas>
+        <div style="font-size:10px;color:var(--text-dim);margin:6px 0 4px">轉換預覽（格子分佈）</div>
+        <canvas id="img2d-result-canvas" width="220" height="160"></canvas>
+      </div>
+    </div>
+    <div class="img2d-controls">
+      <label>閾值 <input type="range" id="img2d-thresh" min="30" max="220" value="110" oninput="img2dUpdate()"> <span id="img2d-thresh-val">110</span></label>
+      <label>密度 <input type="range" id="img2d-density" min="1" max="6" value="3" step="1" oninput="img2dUpdate()"> <span id="img2d-density-val">3</span></label>
+      <label>亮度 <input type="range" id="img2d-bright" min="50" max="200" value="100" oninput="img2dUpdate()"> <span id="img2d-bright-val">100</span>%</label>
+      <label>顏色
+        <select id="img2d-color-mode" onchange="img2dUpdate()">
+          <option value="current">使用當前色</option>
+          <option value="image">保留圖片色</option>
+        </select>
+      </label>
+    </div>
+    <div style="font-size:11px;color:var(--text-dim);margin-bottom:9px">
+      預估機數：<b id="img2d-count" style="color:var(--accent);font-family:var(--mono)">0</b>
+      　格子：<b id="img2d-grid-info" style="color:var(--accent);font-family:var(--mono)">20×20</b>
+    </div>
+    <div class="modal-actions">
+      <button class="hbtn primary" onclick="img2dApply()">✓ 套用至畫布</button>
+      <button class="hbtn" onclick="img2dApplyAsFrame()">📸 套用並錄製隊型</button>
+      <button class="hbtn" onclick="closeImg2DroneModal()">關閉</button>
+    </div>
+    <canvas id="img2d-work-canvas" style="display:none"></canvas>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+// IMAGE → DRONE
+// ════════════════════════════════════════════
+let img2dMode='edge', img2dImage=null, img2dPoints=[];
+
+function openImg2DroneModal(){document.getElementById('img2drone-modal').classList.add('open');}
+function closeImg2DroneModal(){document.getElementById('img2drone-modal').classList.remove('open');}
+
+function setImg2dMode(m){
+  img2dMode=m;
+  document.querySelectorAll('.img2d-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+m).classList.add('active');
+  img2dUpdate();
+}
+
+function img2dDragOver(e){e.preventDefault();document.getElementById('img2d-drop').classList.add('drag-over');}
+function img2dDragLeave(){document.getElementById('img2d-drop').classList.remove('drag-over');}
+function img2dDrop(e){e.preventDefault();img2dDragLeave();const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('image/'))img2dLoad(f);}
+
+function img2dLoad(file){
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const img=new Image();
+    img.onload=()=>{
+      img2dImage=img;
+      const sc=document.getElementById('img2d-src-canvas');
+      const sw=sc.offsetWidth||220,sh=160;
+      sc.width=sw;sc.height=sh;
+      const sctx=sc.getContext('2d');
+      sctx.fillStyle='#090c12';sctx.fillRect(0,0,sw,sh);
+      const scale=Math.min(sw/img.width,sh/img.height);
+      const dw=img.width*scale,dh=img.height*scale;
+      sctx.drawImage(img,(sw-dw)/2,(sh-dh)/2,dw,dh);
+      img2dUpdate();
+    };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function img2dUpdate(){
+  if(!img2dImage)return;
+  const thresh=parseInt(document.getElementById('img2d-thresh').value);
+  const density=parseInt(document.getElementById('img2d-density').value);
+  const brightMul=parseInt(document.getElementById('img2d-bright').value)/100;
+  document.getElementById('img2d-thresh-val').textContent=thresh;
+  document.getElementById('img2d-density-val').textContent=density;
+  document.getElementById('img2d-bright-val').textContent=document.getElementById('img2d-bright').value;
+  document.getElementById('img2d-grid-info').textContent=COLS+'x'+ROWS;
+
+  const wc=document.getElementById('img2d-work-canvas');
+  wc.width=COLS*density;wc.height=ROWS*density;
+  const wctx=wc.getContext('2d');
+  wctx.filter='brightness('+brightMul+')';
+  wctx.drawImage(img2dImage,0,0,wc.width,wc.height);
+  wctx.filter='none';
+  const imgData=wctx.getImageData(0,0,wc.width,wc.height).data;
+  const step=density;
+  const points=[];
+
+  if(img2dMode==='edge'){
+    const grayAt=(x,y)=>{const i=(y*wc.width+x)*4;return imgData[i]*0.299+imgData[i+1]*0.587+imgData[i+2]*0.114;};
+    for(let gy=1;gy<ROWS-1;gy++){for(let gx=1;gx<COLS-1;gx++){
+      const px=gx*step,py=gy*step;
+      const gxv=(-grayAt(px-1,py-1)-2*grayAt(px-1,py)-grayAt(px-1,py+1)+grayAt(px+1,py-1)+2*grayAt(px+1,py)+grayAt(px+1,py+1));
+      const gyv=(-grayAt(px-1,py-1)-2*grayAt(px,py-1)-grayAt(px+1,py-1)+grayAt(px-1,py+1)+2*grayAt(px,py+1)+grayAt(px+1,py+1));
+      if(Math.sqrt(gxv*gxv+gyv*gyv)>thresh){const i=(py*wc.width+px)*4;points.push({r:gy,c:gx,color:'rgb('+imgData[i]+','+imgData[i+1]+','+imgData[i+2]+')'});}
+    }}
+  } else if(img2dMode==='bright'){
+    for(let gy=0;gy<ROWS;gy++){for(let gx=0;gx<COLS;gx++){
+      const px=gx*step,py=gy*step,i=(py*wc.width+px)*4;
+      if(imgData[i]*0.299+imgData[i+1]*0.587+imgData[i+2]*0.114>thresh)
+        points.push({r:gy,c:gx,color:'rgb('+imgData[i]+','+imgData[i+1]+','+imgData[i+2]+')'});
+    }}
+  } else {
+    for(let gy=0;gy<ROWS;gy++){for(let gx=0;gx<COLS;gx++){
+      const px=gx*step,py=gy*step,i=(py*wc.width+px)*4;
+      const r=imgData[i],g=imgData[i+1],b=imgData[i+2];
+      if((r+g+b)/3>thresh||(Math.max(r,g,b)-Math.min(r,g,b))>thresh*0.5)
+        points.push({r:gy,c:gx,color:'rgb('+r+','+g+','+b+')'});
+    }}
+  }
+
+  img2dPoints=points;
+  document.getElementById('img2d-count').textContent=points.length;
+
+  const rc=document.getElementById('img2d-result-canvas');
+  const rw=rc.offsetWidth||220,rh=160;
+  rc.width=rw;rc.height=rh;
+  const rctx=rc.getContext('2d');
+  rctx.fillStyle='#090c12';rctx.fillRect(0,0,rw,rh);
+  const cw=rw/COLS,ch=rh/ROWS;
+  const colorMode=document.getElementById('img2d-color-mode').value;
+  for(const pt of points){
+    rctx.fillStyle=colorMode==='image'?pt.color:currentColor;
+    rctx.beginPath();rctx.arc(pt.c*cw+cw/2,pt.r*ch+ch/2,Math.min(cw,ch)*.38,0,Math.PI*2);rctx.fill();
+  }
+}
+
+function img2dApply(){
+  if(!img2dPoints.length){alert('請先載入圖片');return;}
+  saveHistory();initGrid();
+  const colorMode=document.getElementById('img2d-color-mode').value;
+  for(const pt of img2dPoints){if(pt.r>=0&&pt.r<ROWS&&pt.c>=0&&pt.c<COLS)grid[pt.r][pt.c]=colorMode==='image'?pt.color:currentColor;}
+  render();updateStats();renderPreview();closeImg2DroneModal();
+}
+
+function img2dApplyAsFrame(){img2dApply();recordFrame();}
+
+// ════════════════════════════════════════════
+// MP4 RECORDING
+// ════════════════════════════════════════════
+let mediaRecorder=null, recordedChunks=[], isRecording=false, lastRecordedBlob=null;
+
+function toggleRecordMP4(){if(isRecording)stopRecordMP4();else startRecordMP4();}
+
+function startRecordMP4(){
+  recordedChunks=[];lastRecordedBlob=null;
+  document.getElementById('dl-mp4-btn').style.display='none';
+  const stream=simCanvas.captureStream(30);
+  const mimeTypes=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'];
+  let chosenMime='video/webm';
+  for(const m of mimeTypes){if(MediaRecorder.isTypeSupported(m)){chosenMime=m;break;}}
+  try{mediaRecorder=new MediaRecorder(stream,{mimeType:chosenMime,videoBitsPerSecond:4000000});}
+  catch{mediaRecorder=new MediaRecorder(stream);}
+  mediaRecorder.ondataavailable=e=>{if(e.data&&e.data.size>0)recordedChunks.push(e.data);};
+  mediaRecorder.onstop=()=>{
+    lastRecordedBlob=new Blob(recordedChunks,{type:chosenMime});
+    document.getElementById('dl-mp4-btn').style.display='inline-block';
+    isRecording=false;
+    document.getElementById('rec-indicator').classList.remove('active');
+    document.getElementById('rec-mp4-btn').textContent='⏺ 錄製 MP4';
+    document.getElementById('rec-mp4-btn').style.cssText='border-color:#f5222d;color:#f5222d';
+    document.getElementById('rec-progress').textContent='✓ 完成';
+  };
+  mediaRecorder.start(100);isRecording=true;
+  document.getElementById('rec-indicator').classList.add('active');
+  document.getElementById('rec-mp4-btn').textContent='⏹ 停止錄製';
+  document.getElementById('rec-mp4-btn').style.cssText='border-color:#39ff14;color:#39ff14';
+  const t0=Date.now();
+  (function tick(){if(!isRecording)return;document.getElementById('rec-progress').textContent=((Date.now()-t0)/1000).toFixed(1)+'s';requestAnimationFrame(tick);})();
+}
+
+function stopRecordMP4(){if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();}
+
+function downloadMP4(){
+  if(!lastRecordedBlob)return;
+  const ext=lastRecordedBlob.type.includes('mp4')?'mp4':'webm';
+  const url=URL.createObjectURL(lastRecordedBlob);
+  const a=document.createElement('a');a.href=url;a.download='DroneShow_'+Date.now()+'.'+ext;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),5000);
+}
+</script>
+
+</body>
+</html>
